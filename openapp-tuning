@@ -140,11 +140,11 @@ enable_config() {
 	APACHE_CONFFILE=${CONFDIR}/openapp-tuning-apache.conf
 	case "${OPENAPP_APP}" in
 		joomla|wordpress)
-			[ "$TUNE_APACHE" = "true" ] && echo "ln -s ${APACHE_CONFFILE} /etc/apache2/conf.d/openapp-tuning.conf"
-			[ "$TUNE_MYSQL" = "true" ]  && echo "ln -s ${MYSQL_CONFFILE} /etc/mysql/conf.d/openapp-tuning.cnf"
+			[ "$TUNE_APACHE" = "true" ] && ln -sf ${APACHE_CONFFILE} /etc/apache2/conf.d/openapp-tuning.conf
+			[ "$TUNE_MYSQL" = "true" ]  && ln -sf ${MYSQL_CONFFILE} /etc/mysql/conf.d/openapp-tuning.cnf
 		;;
 		mysql)
-			[ "$TUNE_MYSQL" = "true" ]  && echo "ln -s ${MYSQL_CONFFILE} /etc/mysql/conf.d/openapp-tuning.cnf"
+			[ "$TUNE_MYSQL" = "true" ]  && ln -sf ${MYSQL_CONFFILE} /etc/mysql/conf.d/openapp-tuning.cnf
 		;;
 		*)
 			fatal "Unknown OpenApp application"
@@ -157,10 +157,11 @@ disable_config() {
 
 	case "${OPENAPP_APP}" in
 		joomla|wordpress)
-			echo "rm /etc/apache2/conf.d/openapp-tuning.conf"
+			rm /etc/apache2/conf.d/openapp-tuning.conf
+			rm /etc/mysql/conf.d/openapp-tuning.cnf
 		;;
 		mysql)
-			echo "rm /etc/mysql/conf.d/openapp-tuning.cnf"
+			rm /etc/mysql/conf.d/openapp-tuning.cnf
 		;;
 		*)
 			fatal "Unknown OpenApp application"
