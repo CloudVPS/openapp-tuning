@@ -1,0 +1,87 @@
+#!/bin/bash
+
+fatal() {
+    echo "ERROR: $1"
+    exit 1
+}
+
+apache_config() {
+	OPENAPP_APP=$1
+
+	# Define variables
+	case "${OPENAPP_APP}" in
+		joomla|wordpress) 
+			KEEPALIVE=0
+			STARTSRV=2
+			MINSPARESRV=1
+			MAXSPARESRV=3
+			MAXRQPCHILD=1000
+			MEMPERC=80
+		;;
+
+	esac
+
+	# The number of MaxClients is $MEMPERC % of the total memory, divided by 25000
+	# (the avg size of an apache process)
+	MEM=$(grep MemTotal: /proc/meminfo | awk ' { print $2 } ')
+
+	MAXCLIENTS=$(($MEM/100*$MEMPERC/25000))
+
+	cat <<EOF > openapp-tuning-apache.conf
+
+# Beware! This file will be overwritten on reboots. If you want to tune Apache
+# by yourself, disable apache in /etc/openapp-tuning/config
+
+KeepAliveTimeout ${KEEPALIVE}
+
+<IfModule mpm_prefork_module>
+	StartServers          ${STARTSRV}
+	MinSpareServers       ${MINSPARESRV}
+	MaxSpareServers       ${MAXSPARESRV}
+	MaxClients            ${MAXRQPCHILD}
+	MaxRequestsPerChild   ${MAXCLIENTS}
+</IfModule>
+EOF
+}
+
+enable_config() {
+	OPENAPP_APP=$1
+
+	case "${OPENAPP_APP}" in
+		joomla|wordpress)
+			echo "ln -s /etc/openapp-tuning/openapp-tuning-apache.conf /etc/apache2/conf.d/openapp-tuning.conf"
+		;;
+	esac
+}
+
+disable_config() {
+	OPENAPP_APP=$1
+
+	case "${OPENAPP_APP}" in
+		joomla|wordpress)
+			echo "rm /etc/apache2/conf.d/openapp-tuning.conf"
+		;;
+	esac
+}
+
+[ -z $1 ] || OPENAPP_APP=$1
+[ -z $2 ] || ACTION=$2
+[ -z ${ACTION} ] && fatal "Not enough parameters!"
+
+if [ "${ACTION}" = "start" ]; then
+	case "${OPENAPP_APP}" in
+		joomla|wordpress)
+			apache_config ${OPENAPP_APP}
+		;;
+	esac
+fi
+
+case "${ACTION}" in
+	start)
+		enable_config ${OPENAPP_APP}
+	;;
+	stop)
+		disable_config ${OPENAPP_APP}
+	;;
+esac
+
