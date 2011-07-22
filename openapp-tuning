@@ -5,7 +5,9 @@ fatal() {
     exit 1
 }
 
-[ -f /etc/openapp-tuning/config ] && . /etc/openapp-tuning/config
+[ -f /etc/openapp-tuning/config ] || fatal "No configuration found. Is OpenApp really installed?"
+
+. /etc/openapp-tuning/config
 
 apache_maxclients() {
 	MEMUSAGE=$1

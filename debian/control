@@ -1,0 +1,14 @@
+Source: openapp-tuning
+Section: web
+Priority: extra
+Maintainer: Mark Schouten <mark@tuxis.nl>
+Build-Depends: debhelper
+Standards-Version: 3.9.1
+Homepage: http://www.openpanel.com/openapp/
+
+Package: openapp-tuning
+Architecture: any
+Description: OpenApp Tuning
+ An Openpanel OpenApp package that tunes the processes used by your installed OpenApp.
+ .
+ Please see http://www.openpanel.com/openapp/ for more info.
