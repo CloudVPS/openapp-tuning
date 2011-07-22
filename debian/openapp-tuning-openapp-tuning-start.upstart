@@ -1,0 +1,8 @@
+# OpenApp Tuning
+
+description	"OpenApp Tuning"
+author		"Mark Schouten <mark@tuxis.nl>"
+
+start on (local-filesystems and runlevel [2345])
+
+exec /usr/sbin/openapp-tuning wordpress start
