@@ -19,6 +19,11 @@ set -e
 
 case "$1" in
     configure)
+		echo "Running openapp-tuning..."
+		start openapp-tuning-stop
+		start openapp-tuning-start
+		[ -x /usr/sbin/mysqld ] && restart mysql
+		[ -x /usr/sbin/apache2 ] && /etc/init.d/apache2 restart
 	;;
 	abort-upgrade|abort-remove|abort-deconfigure|triggered)
     ;;
