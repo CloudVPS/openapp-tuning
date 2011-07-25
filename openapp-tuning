@@ -9,6 +9,8 @@ fatal() {
 
 . /etc/openapp-tuning/config
 
+[ -z ${CONFDIR} ] && fatal "CONFDIR Not defined, not tuning anything"
+
 apache_maxclients() {
 	MEMUSAGE=$1
 
