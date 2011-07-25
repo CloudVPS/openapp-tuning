@@ -10,8 +10,8 @@ install:
 	cp init/* $(PREFIX)/etc/init
 
 # config
-	mkdir -p $(PREFIX)/etc
-	cp etc/* $(PREFIX)/etc
+	mkdir -p $(PREFIX)/etc/openapp-tuning
+	cp etc/* $(PREFIX)/etc/openapp-tuning
 
 uninstall:
 # bin
