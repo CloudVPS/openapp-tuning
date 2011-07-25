@@ -4,8 +4,3 @@
 
 %:
 	dh $@
-
-binary-arch: build install
-	dh $@
-	dh_installinit --name=openapp-tuning-start --upstart-only --noscripts
-	dh_installinit --name=openapp-tuning-stop --upstart-only --noscripts
