@@ -5,6 +5,14 @@ install:
 	mkdir -p $(PREFIX)/usr/sbin
 	cp openapp-tuning $(PREFIX)/usr/sbin
 
+# initscripts
+	mkdir -p $(PREFIX)/etc/init
+	cp init/* $(PREFIX)/etc/init
+
+# config
+	mkdir -p $(PREFIX)/etc
+	cp etc/* $(PREFIX)/etc
+
 uninstall:
 # bin
 	rm -rf $(PREFIX)/usr/sbin/openapp-tuning
