@@ -1,2 +1,3 @@
 TUNE_APACHE=true
 TUNE_MYSQL=true
+CONFDIR=/etc/openapp-tuning
