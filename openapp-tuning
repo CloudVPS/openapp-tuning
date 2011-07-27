@@ -130,7 +130,7 @@ innodb_flush_method       = $INNO_FM
 binlog_cache_size         = $BINLOG_CS
 table_open_cache          = $TABLE_O_CACHE
 key_buffer_size           = $KEY_BS
-
+innodb_file_per_table     = 1
 EOF
 	fi
 }
