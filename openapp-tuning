@@ -11,6 +11,11 @@ fatal() {
 
 [ -z ${CONFDIR} ] && fatal "CONFDIR Not defined, not tuning anything"
 
+[ -z $1 ] || OPENAPP_APP=$1
+[ -z $2 ] || ACTION=$2
+[ -z $3 ] || [ "$3" = "dorestart" ] && DORESTART=yes
+[ -z ${ACTION} ] && fatal "Not enough parameters! (Need 'openapp-app' 'start|stop'"
+
 apache_maxclients() {
 	MEMUSAGE=$1
 
@@ -23,7 +28,7 @@ apache_maxclients() {
 apache_config() {
 	OPENAPP_APP=$1
 
-	CONFFILE=${CONFDIR}/openapp-tuning-apache.conf
+	CONFFILE=${CONFDIR}/openapp-tuning-apache.conf.tmp
 
 	[ "$TUNE_APACHE" = "true" ] || return
 
@@ -64,7 +69,7 @@ EOF
 mysql_config() {
 	OPENAPP_APP=$1
 
-	CONFFILE=${CONFDIR}/openapp-tuning-mysql.conf
+	CONFFILE=${CONFDIR}/openapp-tuning-mysql.conf.tmp
 
 	[ "$TUNE_MYSQL" = "true" ] || return
 
@@ -135,6 +140,28 @@ EOF
 	fi
 }
 
+detect_mysql_iblogfile_size() {
+	MYSQL_CONFFILE=${CONFDIR}/openapp-tuning-mysql.conf
+
+	FILESIZE=$(stat -t /var/lib/mysql/ib_logfile1 | cut -f 2 -d ' ')
+	CONFIGSIZE=$(grep innodb_log_file_size ${MYSQL_CONFFILE} | cut -f2 -d '=')
+
+	SIZEMULTIP=$(echo ${CONFIGSIZE: -1})
+
+	BYTES=$(echo ${CONFIGSIZE%%${SIZEMULTIP}})
+
+	case "$SIZEMULTIP" in
+		m)
+			BYTES=$(($BYTES*1024*1024))
+		;;
+		g)
+			BYTES=$(($BYTES*1024*1024*1024))
+		;;
+	esac
+
+	[ $BYTES -ne $FILESIZE ] && echo "change"
+}
+
 enable_config() {
 	OPENAPP_APP=$1
 
@@ -142,11 +169,32 @@ enable_config() {
 	APACHE_CONFFILE=${CONFDIR}/openapp-tuning-apache.conf
 	case "${OPENAPP_APP}" in
 		joomla|wordpress)
-			[ "$TUNE_APACHE" = "true" ] && ln -sf ${APACHE_CONFFILE} /etc/apache2/conf.d/openapp-tuning.conf
-			[ "$TUNE_MYSQL" = "true" ]  && ln -sf ${MYSQL_CONFFILE} /etc/mysql/conf.d/openapp-tuning.cnf
+			diff ${APACHE_CONFFILE}.tmp ${APACHE_CONFFILE} > /dev/null
+			if [ $? -gt 0 ]; then
+				mv ${APACHE_CONFFILE}.tmp ${APACHE_CONFFILE} 
+				[ "$TUNE_APACHE" = "true" ] || return
+				ln -sf ${APACHE_CONFFILE} /etc/apache2/conf.d/openapp-tuning.conf
+				[ "$DORESTART" = "yes" ] && /etc/init.d/apache2 restart
+			else
+				rm ${APACHE_CONFFILE}.tmp
+			fi
 		;;
-		mysql)
-			[ "$TUNE_MYSQL" = "true" ]  && ln -sf ${MYSQL_CONFFILE} /etc/mysql/conf.d/openapp-tuning.cnf
+		mysql|joomla|wordpress)
+			diff ${MYSQL_CONFFILE}.tmp ${MYSQL_CONFFILE} > /dev/null
+			if [ $? -gt 0 ]; then
+				mv ${MYSQL_CONFFILE}.tmp ${MYSQL_CONFFILE}
+				[ "$TUNE_MYSQL" = "true" ] || return
+				IBLOGCHANGE=$(detect_mysql_iblogfile_size)
+				[ "$DORESTART" = "yes" ] && stop mysql
+				if [ "$IBLOGCHANGE" = "change" ]; then
+					mkdir /var/backups/mysql
+					mv /var/lib/mysql/ib_logfile* /var/backups/mysql
+				fi
+				cp ${MYSQL_CONFFILE} /etc/mysql/conf.d/openapp_tuning.cnf
+				[ "$DORESTART" = "yes" ] && start mysql
+			else
+				rm ${MYSQL_CONFFILE}.tmp
+			fi
 		;;
 		*)
 			fatal "Unknown OpenApp application"
@@ -170,10 +218,6 @@ disable_config() {
 		;;
 	esac
 }
-
-[ -z $1 ] || OPENAPP_APP=$1
-[ -z $2 ] || ACTION=$2
-[ -z ${ACTION} ] && fatal "Not enough parameters! (Need 'openapp-app' 'start|stop'"
 
 if [ "${ACTION}" = "start" ]; then
 	case "${OPENAPP_APP}" in
