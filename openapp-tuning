@@ -25,6 +25,53 @@ apache_maxclients() {
 	echo $MAXCLIENTS
 }
 
+lighttpd_config() {
+	OPENAPP_APP=$1
+
+	[ "$TUNE_LIGHTTPD" = "true" ] || return
+
+	CONFFILE=${CONFDIR}/openapp-tuning-lighttpd.conf.tmp
+
+	MAXPHP=4
+
+	# Define variables
+	case "${OPENAPP_APP}" in
+		mysql)
+			MAXPHP=1
+		;;
+	esac
+
+	cat <<EOF > ${CONFFILE}
+## FastCGI programs have the same functionality as CGI programs,
+## but are considerably faster through lower interpreter startup
+## time and socketed communication
+##
+## Documentation: /usr/share/doc/lighttpd-doc/fastcgi.txt.gz
+##                http://www.lighttpd.net/documentation/fastcgi.html
+
+server.modules   += ( "mod_fastcgi" )
+
+## Start an FastCGI server for php (needs the php5-cgi package)
+fastcgi.server    = ( ".php" => 
+	((
+		"bin-path" => "/usr/bin/php-cgi",
+		"socket" => "/tmp/php.socket",
+		"max-procs" => 2,
+		"idle-timeout" => 20,
+		"bin-environment" => ( 
+			"PHP_FCGI_CHILDREN" => "${MAXPHP}",
+			"PHP_FCGI_MAX_REQUESTS" => "10000"
+		),
+		"bin-copy-environment" => (
+			"PATH", "SHELL", "USER"
+		),
+		"broken-scriptfilename" => "enable"
+	))
+)
+EOF
+
+}
+
 apache_config() {
 	OPENAPP_APP=$1
 
@@ -172,8 +219,10 @@ enable_config() {
 
 	MYSQL_CONFFILE=${CONFDIR}/openapp-tuning-mysql.conf
 	APACHE_CONFFILE=${CONFDIR}/openapp-tuning-apache.conf
+	LIGHTTPD_CONFFILE=${CONFDIR}/openapp-tuning-lighttpd.conf
 	case "${OPENAPP_APP}" in
 		joomla|wordpress)
+			[ -r ${APACHE_CONFFILE}.tmp ] || break
 			diff ${APACHE_CONFFILE}.tmp ${APACHE_CONFFILE} > /dev/null 2&>1
 			if [ $? -gt 0 ]; then
 				mv ${APACHE_CONFFILE}.tmp ${APACHE_CONFFILE} 
@@ -183,8 +232,9 @@ enable_config() {
 			else
 				rm ${APACHE_CONFFILE}.tmp
 			fi
-		;;
+		;;&
 		mysql|joomla|wordpress)
+			[ -r ${MYSQL_CONFFILE}.tmp ] || break
 			diff ${MYSQL_CONFFILE}.tmp ${MYSQL_CONFFILE} > /dev/null 2&>1
 			if [ $? -gt 0 ]; then
 				mv ${MYSQL_CONFFILE}.tmp ${MYSQL_CONFFILE}
@@ -210,7 +260,19 @@ enable_config() {
 			else
 				rm ${MYSQL_CONFFILE}.tmp
 			fi
-		;;
+		;;&
+		mysql)
+			[ -r ${LIGHTTPD_CONFFILE}.tmp ] || break
+			diff ${LIGHTTPD_CONFFILE}.tmp ${LIGHTTPD_CONFFILE} > /dev/null 2&>1
+			if [ $? -gt 0 ]; then
+				mv ${LIGHTTPD_CONFFILE}.tmp ${LIGHTTPD_CONFFILE} 
+				[ "$TUNE_LIGHTTPD" = "true" ] || return
+				ln -sf ${LIGHTTPD_CONFFILE} /etc/lighttpd/conf-enabled/10-fastcgi.conf
+				[ "$DORESTART" = "yes" ] && /etc/init.d/apache2 restart
+			else
+				rm ${LIGHTTPD_CONFFILE}.tmp
+			fi
+		;;&
 		*)
 			fatal "Unknown OpenApp application"
 		;;

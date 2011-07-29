@@ -24,6 +24,7 @@ case "$1" in
 		start openapp-tuning-start
 		[ -x /usr/sbin/mysqld ] && restart mysql
 		[ -x /usr/sbin/apache2 ] && /etc/init.d/apache2 restart
+		[ -x /usr/sbin/lighttpd ] && /etc/init.d/lighttpd restart
 	;;
 	abort-upgrade|abort-remove|abort-deconfigure|triggered)
     ;;

@@ -1,3 +1,4 @@
 TUNE_APACHE=true
 TUNE_MYSQL=true
+TUNE_LIGHTTPD=true
 CONFDIR=/etc/openapp-tuning
