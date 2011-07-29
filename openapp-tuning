@@ -13,7 +13,7 @@ fatal() {
 
 [ -z $1 ] || OPENAPP_APP=$1
 [ -z $2 ] || ACTION=$2
-[ -z $3 ] || [ "$3" = "dorestart" ] && DORESTART=yes
+[ -z $3 ] || if [ "$3" = "dorestart" ]; then DORESTART=yes; fi
 [ -z ${ACTION} ] && fatal "Not enough parameters! (Need 'openapp-app' 'start|stop'"
 
 apache_maxclients() {
@@ -226,7 +226,7 @@ enable_config() {
 			diff ${APACHE_CONFFILE}.tmp ${APACHE_CONFFILE} > /dev/null 2&>1
 			if [ $? -gt 0 ]; then
 				mv ${APACHE_CONFFILE}.tmp ${APACHE_CONFFILE} 
-				[ "$TUNE_APACHE" = "true" ] || return
+				[ "$TUNE_APACHE" = "true" ] || break
 				ln -sf ${APACHE_CONFFILE} /etc/apache2/conf.d/openapp-tuning.conf
 				[ "$DORESTART" = "yes" ] && /etc/init.d/apache2 restart
 			else
@@ -238,9 +238,9 @@ enable_config() {
 			diff ${MYSQL_CONFFILE}.tmp ${MYSQL_CONFFILE} > /dev/null 2&>1
 			if [ $? -gt 0 ]; then
 				mv ${MYSQL_CONFFILE}.tmp ${MYSQL_CONFFILE}
-				[ "$TUNE_MYSQL" = "true" ] || return
+				[ "$TUNE_MYSQL" = "true" ] || break
 				IBLOGCHANGE=$(detect_mysql_iblogfile_size)
-				[ "$DORESTART" = "yes" -o "$IBLOGCHANGE" = "change" ] && stop mysql
+				[ "$DORESTART" = "yes" ] && stop mysql
 				if [ "$IBLOGCHANGE" = "change" ]; then
 					[ -r /var/log/mysql/error.log ] || fatal "Cannot determine if Mysql would have a clean shutdown (/var/log/mysql/error.log isn't readable"
 					CLEANSHUT=$(grep 'InnoDB: Shutdown completed; log sequence number' /var/log/mysql/error.log)
@@ -251,14 +251,12 @@ enable_config() {
 							echo "Found clean shutdown of Mysql $second seconds ago"
 							[ -d /var/backups/mysql ] || mkdir /var/backups/mysql
 							mv /var/lib/mysql/ib_logfile* /var/backups/mysql
-							cp ${MYSQL_CONFFILE} /etc/mysql/conf.d/openapp_tuning.cnf
 							break
 						fi
 					done
-				else
-					cp ${MYSQL_CONFFILE} /etc/mysql/conf.d/openapp_tuning.cnf
 				fi
-				[ "$DORESTART" = "yes" -o "$IBLOGCHANGE" = "change" ] && start mysql
+				cp ${MYSQL_CONFFILE} /etc/mysql/conf.d/openapp_tuning.cnf
+				[ "$DORESTART" = "yes" ] && start mysql
 			else
 				rm ${MYSQL_CONFFILE}.tmp
 			fi
@@ -268,13 +266,13 @@ enable_config() {
 			diff ${LIGHTTPD_CONFFILE}.tmp ${LIGHTTPD_CONFFILE} > /dev/null 2&>1
 			if [ $? -gt 0 ]; then
 				mv ${LIGHTTPD_CONFFILE}.tmp ${LIGHTTPD_CONFFILE} 
-				[ "$TUNE_LIGHTTPD" = "true" ] || return
+				[ "$TUNE_LIGHTTPD" = "true" ] || break
 				ln -sf ${LIGHTTPD_CONFFILE} /etc/lighttpd/conf-enabled/10-fastcgi.conf
-				[ "$DORESTART" = "yes" ] && /etc/init.d/apache2 restart
+				[ "$DORESTART" = "yes" ] && /etc/init.d/lighttpd restart
 			else
 				rm ${LIGHTTPD_CONFFILE}.tmp
 			fi
-		;;&
+		;;
 		*)
 			fatal "Unknown OpenApp application"
 		;;
@@ -291,6 +289,7 @@ disable_config() {
 		;;
 		mysql)
 			rm /etc/mysql/conf.d/openapp-tuning.cnf
+			ln -sf /etc/lighttpd/conf-available/10-fastcgi.conf /etc/lighttpd/conf-enabled/10-fastcgi.conf
 		;;
 		*)
 			fatal "Unknown OpenApp application"
@@ -306,6 +305,7 @@ if [ "${ACTION}" = "start" ]; then
 		;;
 		mysql)
 			mysql_config ${OPENAPP_APP}
+			lighttpd_config ${OPENAPP_APP}
 		;;
 		*)
 			fatal "Unknown OpenApp application"
