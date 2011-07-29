@@ -240,7 +240,7 @@ enable_config() {
 				mv ${MYSQL_CONFFILE}.tmp ${MYSQL_CONFFILE}
 				[ "$TUNE_MYSQL" = "true" ] || return
 				IBLOGCHANGE=$(detect_mysql_iblogfile_size)
-				[ "$DORESTART" = "yes" ] && stop mysql
+				[ "$DORESTART" = "yes" -o "$IBLOGCHANGE" = "change" ] && stop mysql
 				if [ "$IBLOGCHANGE" = "change" ]; then
 					[ -r /var/log/mysql/error.log ] || fatal "Cannot determine if Mysql would have a clean shutdown (/var/log/mysql/error.log isn't readable"
 					CLEANSHUT=$(grep 'InnoDB: Shutdown completed; log sequence number' /var/log/mysql/error.log)
@@ -251,12 +251,14 @@ enable_config() {
 							echo "Found clean shutdown of Mysql $second seconds ago"
 							[ -d /var/backups/mysql ] || mkdir /var/backups/mysql
 							mv /var/lib/mysql/ib_logfile* /var/backups/mysql
+							cp ${MYSQL_CONFFILE} /etc/mysql/conf.d/openapp_tuning.cnf
 							break
 						fi
 					done
+				else
+					cp ${MYSQL_CONFFILE} /etc/mysql/conf.d/openapp_tuning.cnf
 				fi
-				cp ${MYSQL_CONFFILE} /etc/mysql/conf.d/openapp_tuning.cnf
-				[ "$DORESTART" = "yes" ] && start mysql
+				[ "$DORESTART" = "yes" -o "$IBLOGCHANGE" = "change" ] && start mysql
 			else
 				rm ${MYSQL_CONFFILE}.tmp
 			fi
