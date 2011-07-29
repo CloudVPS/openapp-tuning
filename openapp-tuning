@@ -17,7 +17,7 @@ fatal() {
 [ -z ${ACTION} ] && fatal "Not enough parameters! (Need 'openapp-app' 'start|stop'"
 
 apache_maxclients() {
-	MEMUSAGE=$1
+	MEMPERC=$1
 
 	MEM=$(grep MemTotal: /proc/meminfo | awk ' { print $2 } ')
 	MAXCLIENTS=$(($MEM/100*$MEMPERC/25000))
@@ -146,6 +146,11 @@ detect_mysql_iblogfile_size() {
 	FILESIZE=$(stat -t /var/lib/mysql/ib_logfile1 | cut -f 2 -d ' ')
 	CONFIGSIZE=$(grep innodb_log_file_size ${MYSQL_CONFFILE} | cut -f2 -d '=')
 
+	if [ -z ${CONFIGSIZE} ]; then
+		echo "nochange"
+		return
+	fi
+
 	SIZEMULTIP=$(echo ${CONFIGSIZE: -1})
 
 	BYTES=$(echo ${CONFIGSIZE%%${SIZEMULTIP}})
@@ -169,7 +174,7 @@ enable_config() {
 	APACHE_CONFFILE=${CONFDIR}/openapp-tuning-apache.conf
 	case "${OPENAPP_APP}" in
 		joomla|wordpress)
-			diff ${APACHE_CONFFILE}.tmp ${APACHE_CONFFILE} > /dev/null
+			diff ${APACHE_CONFFILE}.tmp ${APACHE_CONFFILE} > /dev/null 2&>1
 			if [ $? -gt 0 ]; then
 				mv ${APACHE_CONFFILE}.tmp ${APACHE_CONFFILE} 
 				[ "$TUNE_APACHE" = "true" ] || return
@@ -180,15 +185,25 @@ enable_config() {
 			fi
 		;;
 		mysql|joomla|wordpress)
-			diff ${MYSQL_CONFFILE}.tmp ${MYSQL_CONFFILE} > /dev/null
+			diff ${MYSQL_CONFFILE}.tmp ${MYSQL_CONFFILE} > /dev/null 2&>1
 			if [ $? -gt 0 ]; then
 				mv ${MYSQL_CONFFILE}.tmp ${MYSQL_CONFFILE}
 				[ "$TUNE_MYSQL" = "true" ] || return
 				IBLOGCHANGE=$(detect_mysql_iblogfile_size)
 				[ "$DORESTART" = "yes" ] && stop mysql
 				if [ "$IBLOGCHANGE" = "change" ]; then
-					mkdir /var/backups/mysql
-					mv /var/lib/mysql/ib_logfile* /var/backups/mysql
+					[ -r /var/log/mysql/error.log ] || fatal "Cannot determine if Mysql would have a clean shutdown (/var/log/mysql/error.log isn't readable"
+					CLEANSHUT=$(grep 'InnoDB: Shutdown completed; log sequence number' /var/log/mysql/error.log)
+					for second in `seq 0 10`; do
+						DATESTRING=$(date -d "$second second ago" "+%y%m%d %T")
+						echo "${CLEANSHUT}" | grep -q "${DATESTRING}"
+						if [ $? -eq 0 ]; then
+							echo "Found clean shutdown of Mysql $second seconds ago"
+							[ -d /var/backups/mysql ] || mkdir /var/backups/mysql
+							mv /var/lib/mysql/ib_logfile* /var/backups/mysql
+							break
+						fi
+					done
 				fi
 				cp ${MYSQL_CONFFILE} /etc/mysql/conf.d/openapp_tuning.cnf
 				[ "$DORESTART" = "yes" ] && start mysql
