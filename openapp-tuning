@@ -272,10 +272,7 @@ enable_config() {
 			else
 				rm ${LIGHTTPD_CONFFILE}.tmp
 			fi
-		;;
-		*)
-			fatal "Unknown OpenApp application"
-		;;
+		;;&
 	esac
 }
 
