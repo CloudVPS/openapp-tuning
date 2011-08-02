@@ -81,13 +81,21 @@ apache_config() {
 
 	# Define variables
 	case "${OPENAPP_APP}" in
-		joomla|wordpress) 
+		joomla|wordpress|lamp) 
 			KEEPALIVE=0
 			STARTSRV=2
 			MINSPARESRV=1
 			MAXSPARESRV=3
 			MAXRQPCHILD=1000
 			MEMPERC=80
+		;;
+		lamp) 
+			KEEPALIVE=0
+			STARTSRV=2
+			MINSPARESRV=1
+			MAXSPARESRV=3
+			MAXRQPCHILD=1000
+			MEMPERC=70
 		;;
 
 	esac
@@ -133,6 +141,18 @@ mysql_config() {
 			SKIP_INNODB=1
 			MAX_CONN=$(($(apache_maxclients $APACHEMEMPERC)+5))
 			TABLE_CACHE=50
+            TUNE_INNODB=no
+		;;
+		lamp)
+			APACHEMEMPERC=70
+			QCACHE_LIM=4m
+			QCACHE_SIZE=32m
+			JOINB_SIZE=1m
+			KEYBUFFER=4m
+			SKIP_INNODB=0
+			MAX_CONN=$(($(apache_maxclients $APACHEMEMPERC)+5))
+			TABLE_CACHE=50
+            TUNE_INNODB=no
 		;;
 		mysql)
 			QCACHE_LIM=4m
@@ -152,6 +172,7 @@ mysql_config() {
 			BINLOG_CS=2m
 			TABLE_O_CACHE=$TABLE_CACHE
 			KEY_BS=$(($MEM/100*10/1024))m   # 10% of toal memory
+            TUNE_INNODB=yes
 		;;
 	esac
 
@@ -169,7 +190,7 @@ max-connections         = $MAX_CONN
 table_cache             = $TABLE_CACHE
 EOF
 
-	if [ ${SKIP_INNODB} -eq 0 ]; then
+	if [ "${TUNE_INNODB}" = "yes" ]; then
 		cat <<EOF >> ${CONFFILE}
 innodb_buffer_pool_size   = $INNO_BPS
 innodb_additional_mem_pool_size = $INNO_AMPS
@@ -221,7 +242,7 @@ enable_config() {
 	APACHE_CONFFILE=${CONFDIR}/openapp-tuning-apache.conf
 	LIGHTTPD_CONFFILE=${CONFDIR}/openapp-tuning-lighttpd.conf
 	case "${OPENAPP_APP}" in
-		joomla|wordpress)
+		joomla|wordpress|lamp)
 			[ -r ${APACHE_CONFFILE}.tmp ] || break
 			diff ${APACHE_CONFFILE}.tmp ${APACHE_CONFFILE} > /dev/null 2&>1
 			if [ $? -gt 0 ]; then
@@ -233,7 +254,7 @@ enable_config() {
 				rm ${APACHE_CONFFILE}.tmp
 			fi
 		;;&
-		mysql|joomla|wordpress)
+		mysql|joomla|wordpress|lamp)
 			[ -r ${MYSQL_CONFFILE}.tmp ] || break
 			diff ${MYSQL_CONFFILE}.tmp ${MYSQL_CONFFILE} > /dev/null 2&>1
 			if [ $? -gt 0 ]; then
@@ -280,7 +301,7 @@ disable_config() {
 	OPENAPP_APP=$1
 
 	case "${OPENAPP_APP}" in
-		joomla|wordpress)
+		joomla|wordpress|lamp)
 			rm /etc/apache2/conf.d/openapp-tuning.conf
 			rm /etc/mysql/conf.d/openapp-tuning.cnf
 		;;
@@ -296,7 +317,7 @@ disable_config() {
 
 if [ "${ACTION}" = "start" ]; then
 	case "${OPENAPP_APP}" in
-		joomla|wordpress)
+		joomla|wordpress|lamp)
 			apache_config ${OPENAPP_APP}
 			mysql_config ${OPENAPP_APP}
 		;;
