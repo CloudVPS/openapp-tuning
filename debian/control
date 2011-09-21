@@ -7,7 +7,7 @@ Standards-Version: 3.9.1
 Homepage: http://www.openpanel.com/openapp/
 
 Package: openapp-tuning
-Architecture: any
+Architecture: all
 Description: OpenApp Tuning
  An Openpanel OpenApp package that tunes the processes used by your installed OpenApp.
  .
