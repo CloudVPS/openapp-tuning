@@ -89,7 +89,7 @@ apache_config() {
 			MAXRQPCHILD=1000
 			MEMPERC=80
 		;;
-		ruby|symfony) 
+		tomcat|ruby|symfony) 
 			KEEPALIVE=0
 			STARTSRV=2
 			MINSPARESRV=1
@@ -143,7 +143,7 @@ mysql_config() {
 			TABLE_CACHE=50
             TUNE_INNODB=no
 		;;
-		ruby|drupal|symfony)
+		tomcat|ruby|drupal|symfony)
 			APACHEMEMPERC=70
 			QCACHE_LIM=4m
 			QCACHE_SIZE=32m
@@ -242,7 +242,7 @@ enable_config() {
 	APACHE_CONFFILE=${CONFDIR}/openapp-tuning-apache.conf
 	LIGHTTPD_CONFFILE=${CONFDIR}/openapp-tuning-lighttpd.conf
 	case "${OPENAPP_APP}" in
-		joomla|wordpress|ruby|drupal|symfony)
+		joomla|wordpress|tomcat|ruby|drupal|symfony)
 			[ -r ${APACHE_CONFFILE}.tmp ] || break
 			diff ${APACHE_CONFFILE}.tmp ${APACHE_CONFFILE} > /dev/null 2&>1
 			if [ $? -gt 0 ]; then
@@ -254,7 +254,7 @@ enable_config() {
 				rm ${APACHE_CONFFILE}.tmp
 			fi
 		;;&
-		mysql|joomla|wordpress|ruby|drupal|symfony)
+		mysql|joomla|wordpress|tomcat|ruby|drupal|symfony)
 			[ -r ${MYSQL_CONFFILE}.tmp ] || break
 			diff ${MYSQL_CONFFILE}.tmp ${MYSQL_CONFFILE} > /dev/null 2&>1
 			if [ $? -gt 0 ]; then
@@ -301,7 +301,7 @@ disable_config() {
 	OPENAPP_APP=$1
 
 	case "${OPENAPP_APP}" in
-		joomla|wordpress|ruby|drupal|symfony)
+		joomla|wordpress|tomcat|ruby|drupal|symfony)
 			rm /etc/apache2/conf.d/openapp-tuning.conf
 			rm /etc/mysql/conf.d/openapp-tuning.cnf
 		;;
@@ -317,7 +317,7 @@ disable_config() {
 
 if [ "${ACTION}" = "start" ]; then
 	case "${OPENAPP_APP}" in
-		joomla|wordpress|ruby|drupal|symfony)
+		joomla|wordpress|tomcat|ruby|drupal|symfony)
 			apache_config ${OPENAPP_APP}
 			mysql_config ${OPENAPP_APP}
 		;;
