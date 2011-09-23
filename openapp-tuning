@@ -89,7 +89,7 @@ apache_config() {
 			MAXRQPCHILD=1000
 			MEMPERC=80
 		;;
-		tomcat|ruby|symfony) 
+		ruby|symfony) 
 			KEEPALIVE=0
 			STARTSRV=2
 			MINSPARESRV=1
@@ -242,7 +242,7 @@ enable_config() {
 	APACHE_CONFFILE=${CONFDIR}/openapp-tuning-apache.conf
 	LIGHTTPD_CONFFILE=${CONFDIR}/openapp-tuning-lighttpd.conf
 	case "${OPENAPP_APP}" in
-		joomla|wordpress|tomcat|ruby|drupal|symfony)
+		joomla|wordpress|ruby|drupal|symfony)
 			[ -r ${APACHE_CONFFILE}.tmp ] || break
 			diff ${APACHE_CONFFILE}.tmp ${APACHE_CONFFILE} > /dev/null 2&>1
 			if [ $? -gt 0 ]; then
@@ -301,11 +301,11 @@ disable_config() {
 	OPENAPP_APP=$1
 
 	case "${OPENAPP_APP}" in
-		joomla|wordpress|tomcat|ruby|drupal|symfony)
+		joomla|wordpress|ruby|drupal|symfony)
 			rm /etc/apache2/conf.d/openapp-tuning.conf
 			rm /etc/mysql/conf.d/openapp-tuning.cnf
 		;;
-		mysql)
+		mysql|tomcat)
 			rm /etc/mysql/conf.d/openapp-tuning.cnf
 			ln -sf /etc/lighttpd/conf-available/10-fastcgi.conf /etc/lighttpd/conf-enabled/10-fastcgi.conf
 		;;
@@ -317,13 +317,16 @@ disable_config() {
 
 if [ "${ACTION}" = "start" ]; then
 	case "${OPENAPP_APP}" in
-		joomla|wordpress|tomcat|ruby|drupal|symfony)
+		joomla|wordpress|ruby|drupal|symfony)
 			apache_config ${OPENAPP_APP}
 			mysql_config ${OPENAPP_APP}
 		;;
 		mysql)
 			mysql_config ${OPENAPP_APP}
 			lighttpd_config ${OPENAPP_APP}
+		;;
+		tomcat)
+			mysql_config ${OPENAPP_APP}
 		;;
 		*)
 			fatal "Unknown OpenApp application"
