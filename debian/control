@@ -8,6 +8,7 @@ Homepage: http://www.openpanel.com/openapp/
 
 Package: openapp-tuning
 Architecture: all
+Depends: upstart
 Description: OpenApp Tuning
  An Openpanel OpenApp package that tunes the processes used by your installed OpenApp.
  .
